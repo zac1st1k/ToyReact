@@ -23,11 +23,17 @@ class TextWrapper {
 }
 
 export class Component {
+  constructor() {
+    this.children = [];
+  }
   setAttribute(name, value) {
     this.root.setAttribute(name, value);
   }
+  mountTo(parent) {
+    parent.appendChild(this.root);
+  }
   appendChild(vchild) {
-    vchild.mountTo(this.root);
+    this.children.push(vchild);
   }
 }
 
@@ -42,12 +48,26 @@ export const ToyReact = {
     for (let name in attributes) {
       element.setAttribute(name, attributes[name]);
     }
-    for (let child of children) {
-      if (typeof child === "string") {
-        child = new TextWrapper(child);
+    const insertChildren = (children) => {
+      for (let child of children) {
+        if (typeof child === "object" && child instanceof Array) {
+          insertChildren(child)
+        } else {
+          if (
+            !(child instanceof Component) &&
+            !(child instanceof ElementWrapper) &&
+            !(child instanceof TextWrapper)
+          ) {
+            child = String(child);
+          }
+          if (typeof child === "string") {
+            child = new TextWrapper(child);
+          }
+          element.appendChild(child);
+        }
       }
-      element.appendChild(child);
     }
+    insertChildren(children);
     return element;
   },
   render(vdom, element) {

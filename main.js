@@ -6,6 +6,10 @@ class MyComponent extends Component {
       <span>hello</span>
       &nbsp;
       <span>world!</span>
+      <div>
+        {true}
+        {this.children}
+      </div>
     </div>
   }
   setAttribute(name, value) {
