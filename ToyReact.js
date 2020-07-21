@@ -7,6 +7,9 @@ class ElementWrapper {
       let eventName = RegExp.$1.replace(/^[\s\S]/, s => s.toLowerCase());
       this.root.addEventListener(eventName, value);
     }
+    if (name === "className") {
+      name = "class";
+    }
     this.root.setAttribute(name, value);
   }
   appendChild(vchild) {
