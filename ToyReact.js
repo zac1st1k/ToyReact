@@ -1,17 +1,31 @@
+let childrenSymbol = Symbol('children');
 class ElementWrapper {
   constructor(type) {
     this.type = type;
     this.props = Object.create(null);
+    this[childrenSymbol] = [];
     this.children = [];
   }
   setAttribute(name, value) {
     this.props[name] = value;
   }
+  // get children() {
+  //   return this.children.map(child => child.vdom);
+  // }
   appendChild(vchild) {
-    this.children.push(vchild);
+    this[childrenSymbol].push(vchild);
+    this.children.push(vchild.vdom)
+  }
+  get vdom() {
+    return this;
   }
   mountTo(range) {
     this.range = range;
+    let placeholder = document.createComment("placeholder");
+    let endRange = document.createRange();
+    endRange.setStart(range.endContainer, range.endOffset);
+    endRange.setEnd(range.endContainer, range.endOffset);
+    endRange.insertNode(placeholder);
     range.deleteContents();
     let element = document.createElement(this.type);
     for (let name in this.props) {
@@ -23,7 +37,7 @@ class ElementWrapper {
       if (name === "className") {
         element.setAttribute("class", value);
       }
-      element.setAttribute(name, value)
+      element.setAttribute(name, value);
     }
     for (let child of this.children) {
       let range = document.createRange();
@@ -52,6 +66,9 @@ class TextWrapper {
     range.deleteContents();
     range.insertNode(this.root);
   }
+  get vdom() {
+    return this;
+  }
 }
 
 export class Component {
@@ -71,18 +88,18 @@ export class Component {
     this.update();
   }
   update() {
-    let vdom = this.render();
-    if (this.vdom) {
+    let vdom = this.vdom;
+    if (this.oldVdom) {
       const isSameNode = (node1, node2) => {
         if (node1.type !== node2.type) {
           return false;
         }
         for (let name in node1.props) {
-          if (typeof node1.props[name] === "function"
-            && typeof node2.props[name] === "function"
-            && node1.props[name].toString() === node2.props[name].toString()) {
-            continue;
-          }
+          // if (typeof node1.props[name] === "function"
+          //   && typeof node2.props[name] === "function"
+          //   && node1.props[name].toString() === node2.props[name].toString()) {
+          //   continue;
+          // }
           if (typeof node1.props[name] === "object"
             && typeof node2.props[name] === "object"
             && JSON.stringify(node1.props[name]) === JSON.stringify(node2.props[name])) {
@@ -98,19 +115,19 @@ export class Component {
         return true;
       }
       const isSameTree = (node1, node2) => {
-        if (isSameNode(node1, node2)) {
+        if (!isSameNode(node1, node2)) {
           return false;
         }
         if (node1.children.length !== node2.children.length) {
           return false;
         }
         for (let i = 0; i < node1.children.length; i++) {
-          if (!isSameNode(node1.children[i], node2.children[i])) {
+          if (!isSameTree(node1.children[i], node2.children[i])) {
             return false;
           }
         }
         return true;
-      }
+      };
       const replace = (newTree, oldTree, indent) => {
         console.log(indent + 'new:', newTree);
         console.log(indent + 'old:', oldTree);
@@ -122,19 +139,22 @@ export class Component {
           console.log("all different");
           newTree.mountTo(oldTree.range);
         } else {
-          for (let i = 0; i < newTree.child.length; i++) {
+          for (let i = 0; i < newTree.children.length; i++) {
             replace(newTree.children[i], oldTree.children[i], '  ' + indent);
           }
         }
       }
-      replace(vdom, this.dom, '');
+      replace(vdom, this.oldVdom, '');
     } else {
       vdom.mountTo(this.range);
     }
-    this.vdom = vdom;
+    this.oldVdom = vdom;
+  }
+  get vdom() {
+    return this.render().vdom;
   }
   appendChild(vchild) {
-    this.children.push(vchild);
+    return this.children.push(vchild);
   }
   setState(state) {
     const merge = (oldState, newState) => {
@@ -167,7 +187,7 @@ export const ToyReact = {
     if (typeof type === 'string') {
       element = new ElementWrapper(type);
     } else {
-      element = new type
+      element = new type();
     }
     for (let name in attributes) {
       element.setAttribute(name, attributes[name]);

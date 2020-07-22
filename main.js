@@ -129,6 +129,8 @@ class Game extends Component {
 // todo: support next line
 // ToyReact.render(<Game />, document.getElementById("root"));
 ToyReact.render(<Game />, document.body);
+// let game = <Game />
+// console.log(game.vdom);
 
 function calculateWinner(squares) {
   const lines = [
