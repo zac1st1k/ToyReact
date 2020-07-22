@@ -64,16 +64,14 @@ export class Component {
     this.update();
   }
   update() {
-    // todo: remove placeholder
-    let placeholder = document.createElement("placeholder");
-    let range = document.createRange();
-    range.setStart(this.range.endContainer, this.range.endOffset);
-    range.setEnd(this.range.endContainer, this.range.endOffset);
-    range.insertNode(placeholder);
-    this.range.deleteContents();
-    const vdom = this.render();
-    vdom.mountTo(this.range);
-    // placeholder.parentNode.removeChild(placeholder);
+    let vdom = this.render();
+    if (this.vdom) {
+      console.log('new: ', vdom);
+      console.log('old: ', this.vdom);
+    } else {
+      vdom.mountTo(this.range);
+    }
+    this.vdom = vdom;
   }
   appendChild(vchild) {
     this.children.push(vchild);
