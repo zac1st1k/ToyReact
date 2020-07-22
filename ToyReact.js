@@ -11,9 +11,9 @@ class ElementWrapper {
     this.children.push(vchild);
   }
   mountTo(range) {
+    this.range = range;
     range.deleteContents();
     let element = document.createElement(this.type);
-
     for (let name in this.props) {
       let value = this.props[name];
       if (name.match(/^on([\s\S]+)$/)) {
@@ -43,8 +43,12 @@ class ElementWrapper {
 class TextWrapper {
   constructor(content) {
     this.root = document.createTextNode(content);
+    this.type = '#text';
+    this.children = [];
+    this.props = Object.create(null);
   }
   mountTo(range) {
+    this.range = range;
     range.deleteContents();
     range.insertNode(this.root);
   }
@@ -54,6 +58,9 @@ export class Component {
   constructor() {
     this.children = [];
     this.props = Object.create(null);
+  }
+  get type() {
+    return this.constructor.name;
   }
   setAttribute(name, value) {
     this.props[name] = value;
@@ -66,8 +73,61 @@ export class Component {
   update() {
     let vdom = this.render();
     if (this.vdom) {
-      console.log('new: ', vdom);
-      console.log('old: ', this.vdom);
+      const isSameNode = (node1, node2) => {
+        if (node1.type !== node2.type) {
+          return false;
+        }
+        for (let name in node1.props) {
+          if (typeof node1.props[name] === "function"
+            && typeof node2.props[name] === "function"
+            && node1.props[name].toString() === node2.props[name].toString()) {
+            continue;
+          }
+          if (typeof node1.props[name] === "object"
+            && typeof node2.props[name] === "object"
+            && JSON.stringify(node1.props[name]) === JSON.stringify(node2.props[name])) {
+            continue;
+          }
+          if (node1.props[name] !== node2.props[name]) {
+            return false;
+          }
+        }
+        if (Object.keys(node1.props).length !== Object.keys(node2.props).length) {
+          return false;
+        }
+        return true;
+      }
+      const isSameTree = (node1, node2) => {
+        if (isSameNode(node1, node2)) {
+          return false;
+        }
+        if (node1.children.length !== node2.children.length) {
+          return false;
+        }
+        for (let i = 0; i < node1.children.length; i++) {
+          if (!isSameNode(node1.children[i], node2.children[i])) {
+            return false;
+          }
+        }
+        return true;
+      }
+      const replace = (newTree, oldTree, indent) => {
+        console.log(indent + 'new:', newTree);
+        console.log(indent + 'old:', oldTree);
+        if (isSameTree(newTree, oldTree)) {
+          console.log("all the same");
+          return;
+        }
+        if (!isSameNode(newTree, oldTree)) {
+          console.log("all different");
+          newTree.mountTo(oldTree.range);
+        } else {
+          for (let i = 0; i < newTree.child.length; i++) {
+            replace(newTree.children[i], oldTree.children[i], '  ' + indent);
+          }
+        }
+      }
+      replace(vdom, this.dom, '');
     } else {
       vdom.mountTo(this.range);
     }
